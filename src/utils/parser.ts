@@ -26,11 +26,11 @@ function generateUUID(): string {
 }
 function escapeHtml(str: string): string {
   return str
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, ''');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 export function markdownToBlocks(content: string): Block[] {
   if (!content || !content.trim()) {
@@ -102,4 +102,30 @@ export function markdownToBlocks(content: string): Block[] {
     });
   }
   return blocks;
+}
+
+export function blocksToMarkdown(blocks: Block[]): string {
+  return blocks.map(b => b.raw).join('\n\n');
+}
+
+export function updateBlockInContent(
+  content: string,
+  blockId: string,
+  newRaw: string,
+  position: Block['position']
+): string {
+  const lineEnding = content.includes('\r\n') ? '\r\n' : '\n';
+  const lines = content.split(/\r?\n/);
+
+  const startIdx = position.start.line - 1;
+  const endIdx = position.end.line - 1;
+
+  if (startIdx < 0 || startIdx >= lines.length || endIdx < 0 || endIdx >= lines.length || startIdx > endIdx) {
+    return content;
+  }
+
+  const newLines = newRaw.split(/\r?\n/);
+  lines.splice(startIdx, endIdx - startIdx + 1, ...newLines);
+
+  return lines.join(lineEnding);
 }
