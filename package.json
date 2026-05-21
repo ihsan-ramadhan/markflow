@@ -27,12 +27,14 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run build",
-    "build": "tsc -p ./"
+    "vscode:prepublish": "node esbuild.config.js",
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch"
   },
   "devDependencies": {
     "@types/node": "^18.11.18",
     "@types/vscode": "^1.74.0",
+    "esbuild": "^0.19.11",
     "typescript": "^5.3.3"
   }
 }
