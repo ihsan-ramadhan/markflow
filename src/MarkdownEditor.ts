@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { markdownToBlocks } from './utils/parser';
 
 class MarkdownDocument implements vscode.CustomDocument {
   private readonly _onDidDispose = new vscode.EventEmitter<void>();
@@ -54,13 +55,29 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
       ],
     };
 
-    webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
+    const templateUri = vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'index.html');
+    const templateData = await vscode.workspace.fs.readFile(templateUri);
+    const templateHtml = new TextDecoder('utf-8').decode(templateData);
+
+    const scriptUri = webviewPanel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'editor.js')
+    );
+    const styleUri = webviewPanel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'style.css')
+    );
+
+    webviewPanel.webview.html = templateHtml
+      .replace('${scriptUri}', scriptUri.toString())
+      .replace('${styleUri}', styleUri.toString());
 
     webviewPanel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.type) {
           case 'ready':
-            console.log('Webview is ready');
+            webviewPanel.webview.postMessage({
+              type: 'init',
+              blocks: markdownToBlocks(document.text),
+            });
             break;
         }
       },
@@ -109,17 +126,4 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
     };
   }
 
-  private getHtmlForWebview(webview: vscode.Webview): string {
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MarkFlow Editor</title>
-</head>
-<body>
-  <div id="editor-container"></div>
-</body>
-</html>`;
-  }
 }

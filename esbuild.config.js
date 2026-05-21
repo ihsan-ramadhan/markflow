@@ -4,7 +4,7 @@ const path = require('path');
 const isWatch = process.argv.includes('--watch');
 
 async function main() {
-  const ctx = await esbuild.context({
+  const extensionCtx = await esbuild.context({
     entryPoints: [path.join(__dirname, 'src', 'extension.ts')],
     bundle: true,
     outfile: path.join(__dirname, 'dist', 'extension.js'),
@@ -16,14 +16,28 @@ async function main() {
     logLevel: 'info',
   });
 
+  const webviewCtx = await esbuild.context({
+    entryPoints: [path.join(__dirname, 'webview', 'editor.js')],
+    bundle: true,
+    outfile: path.join(__dirname, 'dist', 'editor.js'),
+    format: 'iife',
+    platform: 'browser',
+    sourcemap: true,
+    minify: !isWatch,
+    logLevel: 'info',
+  });
+
   if (isWatch) {
     console.log('Watching for changes...');
-    await ctx.watch();
+    await extensionCtx.watch();
+    await webviewCtx.watch();
   } else {
-    console.log('Building extension...');
-    await ctx.rebuild();
+    console.log('Building extension and webview...');
+    await extensionCtx.rebuild();
+    await webviewCtx.rebuild();
     console.log('Build finished successfully.');
-    await ctx.dispose();
+    await extensionCtx.dispose();
+    await webviewCtx.dispose();
   }
 }
 
