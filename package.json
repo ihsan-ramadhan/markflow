@@ -1,0 +1,38 @@
+{
+  "name": "markflow",
+  "displayName": "MarkFlow",
+  "description": "WYSIWYG inline Markdown editor for VSCode",
+  "version": "0.0.1",
+  "publisher": "markflow",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Editors"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "markflow.markdownEditor",
+        "displayName": "MarkFlow Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "tsc -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^5.3.3"
+  }
+}
