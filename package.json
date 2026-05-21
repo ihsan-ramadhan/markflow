@@ -31,6 +31,15 @@
     "build": "node esbuild.config.js",
     "watch": "node esbuild.config.js --watch"
   },
+  "dependencies": {
+    "highlight.js": "^11.9.0",
+    "marked": "^18.0.4",
+    "remark": "^15.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-html": "^16.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.4"
+  },
   "devDependencies": {
     "@types/node": "^18.11.18",
     "@types/vscode": "^1.74.0",
