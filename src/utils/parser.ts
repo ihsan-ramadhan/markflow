@@ -1,6 +1,9 @@
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkHtml from 'remark-html';
+import { remark } from 'remark';
+import remarkGfm from 'remark-gfm';
+import hljs from 'highlight.js';
 import * as crypto from 'crypto';
 export type BlockType = 'heading' | 'paragraph' | 'list' | 'code' | 'table' | 'blockquote' | 'hr' | 'image';
 export interface Block {
@@ -36,7 +39,7 @@ export function markdownToBlocks(content: string): Block[] {
   if (!content || !content.trim()) {
     return [];
   }
-  const processor = unified().use(remarkParse);
+  const processor = unified().use(remarkParse).use(remarkGfm);
   const ast = processor.parse(content);
   const blocks: Block[] = [];
   const children = ast.children;
@@ -75,19 +78,44 @@ export function markdownToBlocks(content: string): Block[] {
         type = 'table';
         break;
       case 'paragraph':
-        type = 'paragraph';
+        const pChildren = (node as any).children || [];
+        if (pChildren.length === 1 && pChildren[0].type === 'image') {
+          type = 'image';
+        } else {
+          type = 'paragraph';
+        }
         break;
       default:
         type = 'paragraph';
         break;
     }
     let html = '';
-    try {
-      const htmlResult = unified().use(remarkParse).use(remarkHtml).processSync(raw);
-      html = String(htmlResult).trim();
-    } catch (err) {
-      console.error('Error rendering HTML for block:', err);
-      html = `<p>${escapeHtml(raw)}</p>`;
+    if (type === 'code') {
+      const codeValue = (node as any).value || '';
+      const lang = meta.lang;
+      let highlighted = '';
+      if (lang && hljs.getLanguage(lang)) {
+        try {
+          highlighted = hljs.highlight(codeValue, { language: lang }).value;
+        } catch {
+          highlighted = escapeHtml(codeValue);
+        }
+      } else {
+        try {
+          highlighted = hljs.highlightAuto(codeValue).value;
+        } catch {
+          highlighted = escapeHtml(codeValue);
+        }
+      }
+      html = `<pre><code class="hljs ${lang ? 'language-' + lang : ''}">${highlighted}</code></pre>`;
+    } else {
+      try {
+        const htmlResult = remark().use(remarkGfm).use(remarkHtml).processSync(raw);
+        html = String(htmlResult).trim();
+      } catch (err) {
+        console.error('Error rendering HTML for block:', err);
+        html = `<p>${escapeHtml(raw)}</p>`;
+      }
     }
     blocks.push({
       id: generateUUID(),
