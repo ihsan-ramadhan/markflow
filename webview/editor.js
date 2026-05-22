@@ -66,9 +66,51 @@ import { marked } from 'marked';
     blockEl.appendChild(textarea);
     textarea.focus();
     
+    let undoStack = [textarea.value];
+    let redoStack = [];
+
+    textarea.style.height = (textarea.scrollHeight) + 'px';
     textarea.addEventListener('input', () => {
       textarea.style.height = 'auto';
       textarea.style.height = (textarea.scrollHeight) + 'px';
+      
+      undoStack.push(textarea.value);
+      redoStack = [];
+    });
+
+    textarea.addEventListener('keydown', (e) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const cmdKey = isMac ? e.metaKey : e.ctrlKey;
+      
+      if (cmdKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.shiftKey) {
+          if (redoStack.length > 0) {
+            undoStack.push(textarea.value);
+            textarea.value = redoStack.pop();
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+          }
+        } else {
+          if (undoStack.length > 1) {
+            redoStack.push(undoStack.pop());
+            textarea.value = undoStack[undoStack.length - 1];
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+          }
+        }
+      } else if (cmdKey && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (redoStack.length > 0) {
+          undoStack.push(textarea.value);
+          textarea.value = redoStack.pop();
+          textarea.style.height = 'auto';
+          textarea.style.height = (textarea.scrollHeight) + 'px';
+        }
+      }
     });
 
     textarea.addEventListener('blur', () => {
