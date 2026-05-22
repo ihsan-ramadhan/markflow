@@ -1,9 +1,9 @@
 {
   "name": "markflow",
   "displayName": "MarkFlow",
-  "description": "WYSIWYG inline Markdown editor for VSCode",
-  "version": "0.0.1",
-  "publisher": "markflow",
+  "description": "WYSIWYG inline Markdown editor for VSCode. No split panes, edit and preview in one place.",
+  "version": "1.0.0",
+  "publisher": "ihsanramadhan",
   "engines": {
     "vscode": "^1.74.0"
   },
