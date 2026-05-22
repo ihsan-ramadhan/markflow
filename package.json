@@ -1,5 +1,5 @@
 {
-  "name": "markflow",
+  "name": "markflow-editor",
   "displayName": "MarkFlow",
   "description": "WYSIWYG inline Markdown editor for VSCode. No split panes, edit and preview in one place.",
   "version": "1.0.0",
