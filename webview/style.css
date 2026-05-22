@@ -178,3 +178,30 @@ body {
   border-color: var(--vscode-focusBorder);
   background-color: var(--vscode-editor-hoverHighlightBackground, rgba(255, 255, 255, 0.02));
 }
+
+.md-block.editing {
+  background-color: var(--vscode-editor-hoverHighlightBackground, rgba(255, 255, 255, 0.02));
+  border-color: var(--vscode-focusBorder);
+  cursor: text;
+  padding: 4px 8px;
+}
+
+.edit-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--vscode-editor-font-family, Consolas, Monaco, monospace);
+  font-size: var(--vscode-editor-font-size, 14px);
+  color: var(--vscode-editor-foreground);
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 4px;
+  padding: 8px;
+  resize: vertical;
+  min-height: 40px;
+  outline: none;
+  line-height: 1.5;
+}
+
+.edit-textarea:focus {
+  border-color: var(--vscode-focusBorder);
+}

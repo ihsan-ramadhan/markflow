@@ -1,6 +1,7 @@
 (function () {
   const vscode = acquireVsCodeApi();
   const container = document.getElementById('editor-container');
+  let currentBlocks = [];
 
   window.addEventListener('message', (event) => {
     const message = event.data;
@@ -15,6 +16,7 @@
   function renderBlocks(blocks) {
     if (!container) return;
     container.innerHTML = '';
+    currentBlocks = blocks || [];
 
     if (!blocks || blocks.length === 0) {
       const emptyMsg = document.createElement('div');
@@ -32,6 +34,39 @@
       
       blockEl.innerHTML = block.html;
       container.appendChild(blockEl);
+    });
+  }
+
+  container.addEventListener('dblclick', (e) => {
+    const blockEl = e.target.closest('.md-block');
+    if (!blockEl) return;
+    
+    if (blockEl.classList.contains('editing')) return;
+    
+    const blockId = blockEl.dataset.id;
+    const blockData = currentBlocks.find(b => b.id === blockId);
+    if (!blockData) return;
+    
+    switchToEditMode(blockEl, blockData);
+  });
+
+  function switchToEditMode(blockEl, blockData) {
+    blockEl.classList.add('editing');
+    
+    const textarea = document.createElement('textarea');
+    textarea.className = 'edit-textarea';
+    textarea.value = blockData.raw;
+    
+    const lines = blockData.raw.split('\n').length;
+    textarea.rows = Math.max(lines, 2);
+    
+    blockEl.innerHTML = '';
+    blockEl.appendChild(textarea);
+    textarea.focus();
+    
+    textarea.addEventListener('input', () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = (textarea.scrollHeight) + 'px';
     });
   }
 
