@@ -17,9 +17,12 @@ async function main() {
   });
 
   const webviewCtx = await esbuild.context({
-    entryPoints: [path.join(__dirname, 'webview', 'editor.js')],
+    entryPoints: [
+      path.join(__dirname, 'webview', 'editor.js'),
+      path.join(__dirname, 'webview', 'style.css')
+    ],
     bundle: true,
-    outfile: path.join(__dirname, 'dist', 'editor.js'),
+    outdir: path.join(__dirname, 'dist'),
     format: 'iife',
     platform: 'browser',
     sourcemap: true,

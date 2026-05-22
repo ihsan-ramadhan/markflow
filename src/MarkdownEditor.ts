@@ -14,6 +14,10 @@ class MarkdownDocument implements vscode.CustomDocument {
     return this._documentText;
   }
 
+  public set text(value: string) {
+    this._documentText = value;
+  }
+
   public dispose(): void {
     this._onDidDispose.fire();
     this._onDidDispose.dispose();

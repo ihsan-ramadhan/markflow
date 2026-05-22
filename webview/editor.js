@@ -2,7 +2,6 @@
   const vscode = acquireVsCodeApi();
   const container = document.getElementById('editor-container');
 
-  // Listen for messages from the extension host
   window.addEventListener('message', (event) => {
     const message = event.data;
     switch (message.type) {
@@ -13,7 +12,6 @@
     }
   });
 
-  // Render markdown blocks into the container
   function renderBlocks(blocks) {
     if (!container) return;
     container.innerHTML = '';
@@ -32,13 +30,11 @@
       blockEl.dataset.id = block.id;
       blockEl.dataset.type = block.type;
       
-      // Inject pre-rendered HTML from the parser
       blockEl.innerHTML = block.html;
       container.appendChild(blockEl);
     });
   }
 
-  // Signal to the extension host that the webview is ready to receive data
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       vscode.postMessage({ type: 'ready' });

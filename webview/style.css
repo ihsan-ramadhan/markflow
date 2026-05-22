@@ -1,0 +1,158 @@
+/* Base container style */
+body {
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+  font-size: var(--vscode-editor-font-size, 14px);
+  font-weight: var(--vscode-editor-font-weight, normal);
+  line-height: 1.6;
+  margin: 0;
+  padding: 24px;
+}
+
+#editor-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding-bottom: 120px;
+}
+
+/* Styled Block Wrapper */
+.md-block {
+  position: relative;
+  padding: 6px 12px;
+  margin: 4px 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background-color: transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+/* Eliminate default margins of inner elements to avoid massive vertical gaps */
+.md-block > *:first-child {
+  margin-top: 0;
+}
+.md-block > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Markdown Content Elements Styles */
+.md-block h1,
+.md-block h2,
+.md-block h3,
+.md-block h4,
+.md-block h5,
+.md-block h6 {
+  color: var(--vscode-editor-foreground);
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.md-block h1 { 
+  font-size: 1.8em; 
+  border-bottom: 1px solid var(--vscode-widget-border, rgba(120, 120, 120, 0.15)); 
+  padding-bottom: 6px; 
+}
+.md-block h2 { 
+  font-size: 1.4em; 
+  border-bottom: 1px solid var(--vscode-widget-border, rgba(120, 120, 120, 0.1)); 
+  padding-bottom: 4px; 
+}
+.md-block h3 { font-size: 1.2em; }
+.md-block h4 { font-size: 1.1em; }
+
+.md-block p {
+  margin: 0 0 8px 0;
+  line-height: 1.6;
+}
+
+.md-block blockquote {
+  margin: 0;
+  padding: 0 16px;
+  color: var(--vscode-descriptionForeground);
+  border-left: 4px solid var(--vscode-button-background, #007acc);
+}
+
+.md-block ul,
+.md-block ol {
+  margin: 0 0 8px 0;
+  padding-left: 20px;
+}
+
+.md-block li {
+  margin-bottom: 4px;
+}
+
+.md-block code {
+  font-family: var(--vscode-editor-font-family, Consolas, Monaco, "Courier New", monospace);
+  font-size: 0.9em;
+  background-color: var(--vscode-textCodeBlock-background, rgba(120, 120, 120, 0.1));
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.md-block pre {
+  margin: 0;
+  padding: 12px 16px;
+  background-color: var(--vscode-textCodeBlock-background, rgba(120, 120, 120, 0.1));
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.md-block pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.9em;
+}
+
+.md-block hr {
+  height: 1px;
+  padding: 0;
+  margin: 16px 0;
+  background-color: var(--vscode-widget-border, rgba(120, 120, 120, 0.2));
+  border: 0;
+}
+
+.md-block table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.md-block table th,
+.md-block table td {
+  border: 1px solid var(--vscode-widget-border, rgba(120, 120, 120, 0.2));
+  padding: 6px 12px;
+}
+
+.md-block table th {
+  background-color: var(--vscode-textCodeBlock-background, rgba(120, 120, 120, 0.05));
+  font-weight: 600;
+}
+
+/* Hover State */
+.md-block:hover {
+  background-color: var(--vscode-editor-hoverHighlightBackground, rgba(255, 255, 255, 0.02));
+  border-color: var(--vscode-editor-lineHighlightBorder, var(--vscode-widget-border, rgba(120, 120, 120, 0.2)));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Empty Editor Placeholder styling */
+.empty-editor {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  text-align: center;
+  padding: 60px 20px;
+  border: 2px dashed var(--vscode-widget-border, rgba(120, 120, 120, 0.2));
+  border-radius: 8px;
+  margin-top: 20px;
+  transition: all 0.3s ease;
+}
+
+.empty-editor:hover {
+  border-color: var(--vscode-focusBorder);
+  background-color: var(--vscode-editor-hoverHighlightBackground, rgba(255, 255, 255, 0.02));
+}
