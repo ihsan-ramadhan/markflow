@@ -1,3 +1,5 @@
+import { marked } from 'marked';
+
 (function () {
   const vscode = acquireVsCodeApi();
   const container = document.getElementById('editor-container');
@@ -67,6 +69,27 @@
     textarea.addEventListener('input', () => {
       textarea.style.height = 'auto';
       textarea.style.height = (textarea.scrollHeight) + 'px';
+    });
+
+    textarea.addEventListener('blur', () => {
+      saveAndExit(blockEl, blockData, textarea);
+    });
+  }
+
+  function saveAndExit(blockEl, blockData, textarea) {
+    const newRaw = textarea.value;
+    blockData.raw = newRaw;
+    
+    const newHtml = marked.parse(newRaw).trim();
+    blockData.html = newHtml;
+    
+    blockEl.innerHTML = newHtml;
+    blockEl.classList.remove('editing');
+    
+    vscode.postMessage({
+      type: 'updateBlock',
+      id: blockData.id,
+      raw: newRaw
     });
   }
 
