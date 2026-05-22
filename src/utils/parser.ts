@@ -12,8 +12,8 @@ export interface Block {
   raw: string;
   html: string;
   position: {
-    start: { line: number; column: number };
-    end: { line: number; column: number };
+    start: { line: number; column: number; offset?: number };
+    end: { line: number; column: number; offset?: number };
   };
   meta?: {
     level?: number;

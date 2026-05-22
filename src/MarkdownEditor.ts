@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { markdownToBlocks } from './utils/parser';
+import { markdownToBlocks, updateBlockInContent } from './utils/parser';
 
 class MarkdownDocument implements vscode.CustomDocument {
   private readonly _onDidDispose = new vscode.EventEmitter<void>();
@@ -83,11 +83,39 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
               blocks: markdownToBlocks(document.text),
             });
             break;
+          case 'updateBlock':
+            this.updateBlock(document, message.index, message.raw, webviewPanel);
+            break;
         }
       },
       undefined,
       this.context.subscriptions
     );
+  }
+
+  private updateBlock(document: MarkdownDocument, index: number, newRaw: string, webviewPanel: vscode.WebviewPanel) {
+    const blocks = markdownToBlocks(document.text);
+    if (index < 0 || index >= blocks.length) return;
+
+    const block = blocks[index];
+    if (!block.position) return;
+
+    const oldText = document.text;
+    const newText = updateBlockInContent(document.text, block.id, newRaw, block.position);
+    
+    this._onDidChangeCustomDocument.fire({
+      document,
+      undo: () => {
+        document.text = oldText;
+        webviewPanel.webview.postMessage({ type: 'update', blocks: markdownToBlocks(document.text) });
+      },
+      redo: () => {
+        document.text = newText;
+        webviewPanel.webview.postMessage({ type: 'update', blocks: markdownToBlocks(document.text) });
+      }
+    });
+    
+    document.text = newText;
   }
 
   public async saveCustomDocument(

@@ -86,9 +86,12 @@ import { marked } from 'marked';
     blockEl.innerHTML = newHtml;
     blockEl.classList.remove('editing');
     
+    const blockIndex = currentBlocks.findIndex(b => b.id === blockData.id);
+    
     vscode.postMessage({
       type: 'updateBlock',
       id: blockData.id,
+      index: blockIndex,
       raw: newRaw
     });
   }
