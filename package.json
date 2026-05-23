@@ -2,13 +2,14 @@
   "name": "markflow-editor",
   "displayName": "MarkFlow Editor",
   "description": "WYSIWYG inline Markdown editor for VSCode. No split panes, edit and preview in one place.",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "icon": "logo.png",
   "publisher": "ihsanramadhan",
   "engines": {
     "vscode": "^1.74.0"
   },
   "categories": [
-    "Editors"
+    "Other"
   ],
   "repository": {
     "type": "git",
