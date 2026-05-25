@@ -205,3 +205,66 @@ body {
 .edit-textarea:focus {
   border-color: var(--vscode-focusBorder);
 }
+
+.block-wrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  margin: 4px 0;
+}
+
+.block-wrapper .md-block {
+  flex: 1;
+  margin: 0;
+}
+
+.hover-add-btn {
+  position: absolute;
+  left: -32px;
+  top: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  padding: 0;
+  z-index: 10;
+}
+
+.block-wrapper:hover .hover-add-btn {
+  opacity: 1;
+}
+
+.hover-add-btn:hover {
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(120, 120, 120, 0.15));
+  color: var(--vscode-editor-foreground);
+  border-color: var(--vscode-widget-border, rgba(120, 120, 120, 0.2));
+}
+
+.bottom-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  margin-top: 16px;
+  border: 1px dashed var(--vscode-widget-border, rgba(120, 120, 120, 0.2));
+  border-radius: 6px;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  user-select: none;
+}
+
+.bottom-add-btn:hover {
+  border-color: var(--vscode-focusBorder);
+  background-color: var(--vscode-editor-hoverHighlightBackground, rgba(255, 255, 255, 0.02));
+  color: var(--vscode-editor-foreground);
+}

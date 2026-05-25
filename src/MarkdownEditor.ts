@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { markdownToBlocks, updateBlockInContent } from './utils/parser';
+import { markdownToBlocks, updateBlockInContent, insertBlockInContent } from './utils/parser';
 
 export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = 'markflow.markdownEditor';
@@ -38,7 +38,6 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       .replace('${scriptUri}', scriptUri.toString())
       .replace('${styleUri}', styleUri.toString());
 
-    // Listen to messages from the webview
     const messageSubscription = webviewPanel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.type) {
@@ -50,6 +49,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             break;
           case 'updateBlock':
             this.updateBlock(document, message.index, message.raw);
+            break;
+          case 'addBlock':
+            this.addBlock(document, message.index);
             break;
         }
       },
@@ -66,7 +68,6 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       }
     });
 
-    // Clean up subscriptions when the webview is closed
     webviewPanel.onDidDispose(() => {
       changeDocumentSubscription.dispose();
       messageSubscription.dispose();
@@ -82,7 +83,18 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
     const newText = updateBlockInContent(document.getText(), block.id, newRaw, block.position);
     
-    // Create a WorkspaceEdit to replace the entire document content
+    const edit = new vscode.WorkspaceEdit();
+    const lastLine = document.lineAt(document.lineCount - 1);
+    const fullRange = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
+    
+    edit.replace(document.uri, fullRange, newText);
+    vscode.workspace.applyEdit(edit);
+  }
+
+  private addBlock(document: vscode.TextDocument, index: number) {
+    const blocks = markdownToBlocks(document.getText());
+    const newText = insertBlockInContent(document.getText(), index, blocks);
+
     const edit = new vscode.WorkspaceEdit();
     const lastLine = document.lineAt(document.lineCount - 1);
     const fullRange = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
