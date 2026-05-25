@@ -46,9 +46,11 @@ import { marked } from 'marked';
       const wrapper = document.createElement('div');
       wrapper.className = 'block-wrapper';
 
-      // Hover Add Button on the left of each block
+      const actionGroup = document.createElement('div');
+      actionGroup.className = 'block-actions';
+
       const addBtn = document.createElement('button');
-      addBtn.className = 'hover-add-btn';
+      addBtn.className = 'action-btn hover-add-btn';
       addBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 16 16"><path fill="currentColor" d="M14 7H9V2H7v5H2v2h5v5h2V9h5V7z"/></svg>`;
       addBtn.title = 'Add block below';
       addBtn.addEventListener('click', (e) => {
@@ -60,18 +62,37 @@ import { marked } from 'marked';
         });
       });
 
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'action-btn hover-delete-btn';
+      deleteBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 16 16"><path fill="currentColor" d="M11 2H9c0-.55-.45-1-1-1s-1 .45-1 1H5c-.55 0-1 .45-1 1v1h8V3c0-.55-.45-1-1-1zm1 3H4v9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V5zm-2 8H6v-1h4v1zm0-2H6v-1h4v1zm0-2H6V7h4v1z"/></svg>`;
+      deleteBtn.title = 'Delete block';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        vscode.postMessage({
+          type: 'deleteBlock',
+          index: index
+        });
+      });
+
+      actionGroup.appendChild(addBtn);
+      actionGroup.appendChild(deleteBtn);
+
       const blockEl = document.createElement('div');
       blockEl.className = 'md-block';
       blockEl.dataset.id = block.id;
       blockEl.dataset.type = block.type;
-      blockEl.innerHTML = block.html;
+      
+      if (!block.raw || block.raw.trim() === '') {
+        blockEl.innerHTML = `<p class="placeholder-text">Tulis sesuatu...</p>`;
+      } else {
+        blockEl.innerHTML = block.html;
+      }
 
-      wrapper.appendChild(addBtn);
+      wrapper.appendChild(actionGroup);
       wrapper.appendChild(blockEl);
       container.appendChild(wrapper);
     });
 
-    // Elegant bottom "+ Add Block" button
     const bottomAddBtn = document.createElement('div');
     bottomAddBtn.className = 'bottom-add-btn';
     bottomAddBtn.innerHTML = `<span>+ Add Block</span>`;
@@ -84,7 +105,6 @@ import { marked } from 'marked';
     });
     container.appendChild(bottomAddBtn);
 
-    // Auto-focus new block if set
     if (pendingFocusIndex !== null) {
       const wrappers = container.querySelectorAll('.block-wrapper');
       if (pendingFocusIndex >= 0 && pendingFocusIndex < wrappers.length) {
@@ -182,7 +202,7 @@ import { marked } from 'marked';
         console.log('Tab pressed, currentIndex:', currentIndex, 'blockData.id:', blockData.id);
         
         isSaving = true;
-        const newRaw = textarea.value;
+        const newRaw = textarea.value.replace(/\r?\n+$/, '');
         blockData.raw = newRaw;
         const newHtml = marked.parse(newRaw).trim();
         blockData.html = newHtml;
@@ -224,13 +244,17 @@ import { marked } from 'marked';
             }
           }
         }, 10);
+      } else if (e.key === 'Enter' && !e.shiftKey && !cmdKey) {
+        e.preventDefault();
+        console.log('Enter pressed, blurring textarea');
+        textarea.blur();
       } else if (cmdKey && e.key === 'Enter') {
         e.preventDefault();
         const currentIndex = currentBlocks.findIndex(b => b.id === blockData.id);
         console.log('Ctrl+Enter pressed, currentIndex:', currentIndex);
         
         isSaving = true;
-        const newRaw = textarea.value;
+        const newRaw = textarea.value.replace(/\r?\n+$/, '');
         blockData.raw = newRaw;
         const newHtml = marked.parse(newRaw).trim();
         blockData.html = newHtml;
@@ -245,6 +269,31 @@ import { marked } from 'marked';
           index: currentIndex,
           raw: newRaw
         });
+      } else if (e.key === 'Backspace' && textarea.value === '') {
+        e.preventDefault();
+        const currentIndex = currentBlocks.findIndex(b => b.id === blockData.id);
+        console.log('Backspace pressed on empty block, currentIndex:', currentIndex);
+
+        isSaving = true;
+        blockEl.classList.remove('editing');
+        editingBlockId = null;
+
+        vscode.postMessage({
+          type: 'deleteBlock',
+          index: currentIndex
+        });
+
+        setTimeout(() => {
+          const wrappers = container.querySelectorAll('.block-wrapper');
+          if (currentIndex > 0 && currentIndex - 1 < wrappers.length) {
+            const prevWrapper = wrappers[currentIndex - 1];
+            const prevBlock = prevWrapper.querySelector('.md-block');
+            const prevBlockData = currentBlocks[currentIndex - 1];
+            if (prevBlock && prevBlockData) {
+              switchToEditMode(prevBlock, prevBlockData);
+            }
+          }
+        }, 10);
       }
     });
 
@@ -259,7 +308,7 @@ import { marked } from 'marked';
     console.log('saveAndExit called, blockEl has editing:', blockEl.classList.contains('editing'));
     if (!blockEl.classList.contains('editing')) return;
     
-    const newRaw = textarea.value;
+    const newRaw = textarea.value.replace(/\r?\n+$/, '');
     blockData.raw = newRaw;
     
     const newHtml = marked.parse(newRaw).trim();

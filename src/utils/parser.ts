@@ -178,3 +178,32 @@ export function insertBlockInContent(
 
   return lines.join(lineEnding);
 }
+
+export function deleteBlockInContent(
+  content: string,
+  blockId: string,
+  position: Block['position']
+): string {
+  const lineEnding = content.includes('\r\n') ? '\r\n' : '\n';
+  const lines = content.split(/\r?\n/);
+
+  const startIdx = position.start.line - 1;
+  const endIdx = position.end.line - 1;
+
+  if (startIdx < 0 || startIdx >= lines.length || endIdx < 0 || endIdx >= lines.length || startIdx > endIdx) {
+    return content;
+  }
+
+  // Remove the block lines
+  lines.splice(startIdx, endIdx - startIdx + 1);
+
+  // Clean up adjacent empty line separator
+  if (startIdx - 1 >= 0 && lines[startIdx - 1] === '') {
+    lines.splice(startIdx - 1, 1);
+  } else if (startIdx < lines.length && lines[startIdx] === '') {
+    lines.splice(startIdx, 1);
+  }
+
+  const result = lines.join(lineEnding);
+  return result.trim() === '' ? '' : result;
+}
