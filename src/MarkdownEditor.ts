@@ -53,6 +53,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           case 'addBlock':
             this.addBlock(document, message.index);
             break;
+          case 'saveAndAddBlock':
+            this.saveAndAddBlock(document, message.index, message.raw);
+            break;
         }
       },
       undefined,
@@ -94,6 +97,25 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   private addBlock(document: vscode.TextDocument, index: number) {
     const blocks = markdownToBlocks(document.getText());
     const newText = insertBlockInContent(document.getText(), index, blocks);
+
+    const edit = new vscode.WorkspaceEdit();
+    const lastLine = document.lineAt(document.lineCount - 1);
+    const fullRange = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
+    
+    edit.replace(document.uri, fullRange, newText);
+    vscode.workspace.applyEdit(edit);
+  }
+
+  private saveAndAddBlock(document: vscode.TextDocument, index: number, newRaw: string) {
+    const blocks = markdownToBlocks(document.getText());
+    if (index < 0 || index >= blocks.length) return;
+
+    const block = blocks[index];
+    if (!block.position) return;
+    const updatedText = updateBlockInContent(document.getText(), block.id, newRaw, block.position);
+
+    const updatedBlocks = markdownToBlocks(updatedText);
+    const newText = insertBlockInContent(updatedText, index, updatedBlocks);
 
     const edit = new vscode.WorkspaceEdit();
     const lastLine = document.lineAt(document.lineCount - 1);

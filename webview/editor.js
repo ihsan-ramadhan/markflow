@@ -9,6 +9,7 @@ import { marked } from 'marked';
 
   window.addEventListener('message', (event) => {
     const message = event.data;
+    console.log('Webview received message:', message.type, 'editingBlockId:', editingBlockId);
     switch (message.type) {
       case 'init':
         editingBlockId = null;
@@ -16,8 +17,10 @@ import { marked } from 'marked';
         break;
       case 'update':
         if (editingBlockId !== null) {
+          console.log('Ignoring update render because editingBlockId is not null:', editingBlockId);
           break;
         }
+        console.log('Rendering blocks on update message');
         renderBlocks(message.blocks);
         break;
     }
@@ -112,6 +115,7 @@ import { marked } from 'marked';
   function switchToEditMode(blockEl, blockData) {
     editingBlockId = blockData.id;
     blockEl.classList.add('editing');
+    let isSaving = false;
     
     const textarea = document.createElement('textarea');
     textarea.className = 'edit-textarea';
@@ -168,15 +172,91 @@ import { marked } from 'marked';
           textarea.style.height = 'auto';
           textarea.style.height = (textarea.scrollHeight) + 'px';
         }
+      } else if (e.key === 'Escape') {
+        console.log('Escape pressed, blurring textarea');
+        e.preventDefault();
+        textarea.blur();
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        const currentIndex = currentBlocks.findIndex(b => b.id === blockData.id);
+        console.log('Tab pressed, currentIndex:', currentIndex, 'blockData.id:', blockData.id);
+        
+        isSaving = true;
+        const newRaw = textarea.value;
+        blockData.raw = newRaw;
+        const newHtml = marked.parse(newRaw).trim();
+        blockData.html = newHtml;
+        blockEl.innerHTML = newHtml;
+        blockEl.classList.remove('editing');
+        editingBlockId = null;
+
+        vscode.postMessage({
+          type: 'updateBlock',
+          id: blockData.id,
+          index: currentIndex,
+          raw: newRaw
+        });
+        
+        setTimeout(() => {
+          const wrappers = container.querySelectorAll('.block-wrapper');
+          console.log('Timeout fired, wrappers length:', wrappers.length);
+          if (e.shiftKey) {
+            console.log('Shift+Tab: finding previous block');
+            if (currentIndex > 0) {
+              const prevWrapper = wrappers[currentIndex - 1];
+              const prevBlock = prevWrapper.querySelector('.md-block');
+              const prevBlockData = currentBlocks[currentIndex - 1];
+              console.log('Found previous block element:', !!prevBlock, 'prevBlockData:', !!prevBlockData);
+              if (prevBlock && prevBlockData) {
+                switchToEditMode(prevBlock, prevBlockData);
+              }
+            }
+          } else {
+            console.log('Tab: finding next block');
+            if (currentIndex < currentBlocks.length - 1) {
+              const nextWrapper = wrappers[currentIndex + 1];
+              const nextBlock = nextWrapper.querySelector('.md-block');
+              const nextBlockData = currentBlocks[currentIndex + 1];
+              console.log('Found next block element:', !!nextBlock, 'nextBlockData:', !!nextBlockData);
+              if (nextBlock && nextBlockData) {
+                switchToEditMode(nextBlock, nextBlockData);
+              }
+            }
+          }
+        }, 10);
+      } else if (cmdKey && e.key === 'Enter') {
+        e.preventDefault();
+        const currentIndex = currentBlocks.findIndex(b => b.id === blockData.id);
+        console.log('Ctrl+Enter pressed, currentIndex:', currentIndex);
+        
+        isSaving = true;
+        const newRaw = textarea.value;
+        blockData.raw = newRaw;
+        const newHtml = marked.parse(newRaw).trim();
+        blockData.html = newHtml;
+        blockEl.innerHTML = newHtml;
+        blockEl.classList.remove('editing');
+        editingBlockId = null;
+
+        pendingFocusIndex = currentIndex + 1;
+        console.log('Set pendingFocusIndex:', pendingFocusIndex);
+        vscode.postMessage({
+          type: 'saveAndAddBlock',
+          index: currentIndex,
+          raw: newRaw
+        });
       }
     });
 
     textarea.addEventListener('blur', () => {
+      console.log('Textarea blur triggered for block ID:', blockData.id, 'isSaving:', isSaving);
+      if (isSaving) return;
       saveAndExit(blockEl, blockData, textarea);
     });
   }
 
   function saveAndExit(blockEl, blockData, textarea) {
+    console.log('saveAndExit called, blockEl has editing:', blockEl.classList.contains('editing'));
     if (!blockEl.classList.contains('editing')) return;
     
     const newRaw = textarea.value;
