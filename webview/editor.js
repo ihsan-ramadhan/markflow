@@ -10,6 +10,26 @@ import { marked } from 'marked';
   let lastSelectedIndex = -1;
   let shouldSelectLastIndexOnUpdate = false;
 
+  let slashMenu = null;
+  let slashState = { active: false, filter: '', selectedIndex: 0, textarea: null, startCursorPos: 0 };
+  const slashOptions = [
+    { id: 'text', title: 'Text', subtitle: 'Plain text.', prefix: '' },
+    { id: 'h1', title: 'Heading 1', subtitle: 'Big section heading.', prefix: '# ' },
+    { id: 'h2', title: 'Heading 2', subtitle: 'Medium section heading.', prefix: '## ' },
+    { id: 'h3', title: 'Heading 3', subtitle: 'Small section heading.', prefix: '### ' },
+    { id: 'ul', title: 'Bulleted List', subtitle: 'Simple bulleted list.', prefix: '- ' },
+    { id: 'ol', title: 'Numbered List', subtitle: 'Sequential numbered list.', prefix: '1. ' },
+    { id: 'todo', title: 'Checklist', subtitle: 'List with checkboxes.', prefix: '- [ ] ' },
+    { id: 'image', title: 'Image', subtitle: 'Insert image link.', prefix: '![Image alt](url)' },
+    { id: 'video', title: 'Video', subtitle: 'HTML5 video tag.', prefix: '<video src="url" controls></video>' },
+    { id: 'file', title: 'File', subtitle: 'Link to a file.', prefix: '[File name](url)' },
+    { id: 'code', title: 'Code Block', subtitle: 'Syntax-highlighted code.', prefix: '```javascript\n\n```' },
+    { id: 'table', title: 'Table', subtitle: 'Markdown table.', prefix: '| Header 1 | Header 2 |\n|---|---|\n| Cell 1 | Cell 2 |' },
+    { id: 'quote', title: 'Blockquote', subtitle: 'Capture a quote.', prefix: '> ' },
+    { id: 'divider', title: 'Divider', subtitle: 'Visual separator line.', prefix: '---\n' },
+    { id: 'callout', title: 'Callout', subtitle: 'Colored info box.', prefix: '> [!NOTE]\n> ' }
+  ];
+
   window.addEventListener('message', (event) => {
     const message = event.data;
     console.log('Webview received message:', message.type, 'editingBlockId:', editingBlockId);
@@ -118,8 +138,8 @@ import { marked } from 'marked';
       blockEl.dataset.id = block.id;
       blockEl.dataset.type = block.type;
       
-      if (!block.raw || block.raw.trim() === '') {
-        blockEl.innerHTML = `<p class="placeholder-text">Tulis sesuatu...</p>`;
+      if (!block.raw || block.raw.trim() === '' || block.raw === 'New paragraph') {
+        blockEl.innerHTML = `<p class="placeholder-text">Tulis sesuatu, atau ketik '/' untuk perintah...</p>`;
       } else {
         blockEl.innerHTML = block.html;
       }
@@ -217,7 +237,8 @@ import { marked } from 'marked';
     
     const textarea = document.createElement('textarea');
     textarea.className = 'edit-textarea';
-    textarea.value = blockData.raw;
+    textarea.value = (blockData.raw === 'New paragraph') ? '' : blockData.raw;
+    textarea.placeholder = "Ketik '/' untuk memunculkan perintah...";
     
     const lines = blockData.raw.split('\n').length;
     textarea.rows = Math.max(lines, 2);
@@ -236,9 +257,57 @@ import { marked } from 'marked';
       
       undoStack.push(textarea.value);
       redoStack = [];
+
+      const cursorPos = textarea.selectionStart;
+      const textBeforeCursor = textarea.value.substring(0, cursorPos);
+      const lastChar = textBeforeCursor[textBeforeCursor.length - 1];
+      
+      if (lastChar === '/') {
+        const prevChar = textBeforeCursor.length > 1 ? textBeforeCursor[textBeforeCursor.length - 2] : '\n';
+        if (prevChar === ' ' || prevChar === '\n' || prevChar === '\r') {
+          showSlashMenu(textarea);
+        }
+      }
+      
+      if (slashState.active) {
+        updateSlashMenu();
+      }
     });
 
     textarea.addEventListener('keydown', (e) => {
+      if (slashState.active) {
+        const filtered = slashOptions.filter(opt => 
+          opt.title.toLowerCase().includes(slashState.filter) ||
+          opt.id.toLowerCase().includes(slashState.filter)
+        );
+        
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          e.stopPropagation();
+          slashState.selectedIndex = (slashState.selectedIndex + 1) % filtered.length;
+          renderSlashMenu();
+          return;
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          e.stopPropagation();
+          slashState.selectedIndex = (slashState.selectedIndex - 1 + filtered.length) % filtered.length;
+          renderSlashMenu();
+          return;
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          if (filtered[slashState.selectedIndex]) {
+            selectSlashOption(filtered[slashState.selectedIndex]);
+          }
+          return;
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          closeSlashMenu();
+          return;
+        }
+      }
+
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const cmdKey = isMac ? e.metaKey : e.ctrlKey;
       
@@ -379,9 +448,130 @@ import { marked } from 'marked';
 
     textarea.addEventListener('blur', () => {
       console.log('Textarea blur triggered for block ID:', blockData.id, 'isSaving:', isSaving);
+      setTimeout(() => closeSlashMenu(), 150);
       if (isSaving) return;
       saveAndExit(blockEl, blockData, textarea);
     });
+  }
+
+  function showSlashMenu(textarea) {
+    slashState.active = true;
+    slashState.textarea = textarea;
+    slashState.selectedIndex = 0;
+    slashState.filter = '';
+    
+    const rect = textarea.getBoundingClientRect();
+    slashMenu.style.top = `${rect.bottom + window.scrollY}px`;
+    slashMenu.style.left = `${rect.left + window.scrollX}px`;
+    slashMenu.classList.add('active');
+    
+    renderSlashMenu();
+  }
+
+  function updateSlashMenu() {
+    if (!slashState.active || !slashState.textarea) return;
+    
+    const textarea = slashState.textarea;
+    const value = textarea.value;
+    const cursorPos = textarea.selectionStart;
+    
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const slashIdx = textBeforeCursor.lastIndexOf('/');
+    
+    if (slashIdx === -1) {
+      closeSlashMenu();
+      return;
+    }
+    
+    const charBeforeSlash = slashIdx > 0 ? textBeforeCursor[slashIdx - 1] : '\n';
+    if (charBeforeSlash !== ' ' && charBeforeSlash !== '\n' && charBeforeSlash !== '\r') {
+      closeSlashMenu();
+      return;
+    }
+    
+    slashState.startCursorPos = slashIdx;
+    slashState.filter = textBeforeCursor.substring(slashIdx + 1).toLowerCase();
+    
+    const rect = textarea.getBoundingClientRect();
+    slashMenu.style.top = `${rect.bottom + window.scrollY}px`;
+    slashMenu.style.left = `${rect.left + window.scrollX}px`;
+    
+    renderSlashMenu();
+  }
+
+  function renderSlashMenu() {
+    if (!slashMenu) return;
+    slashMenu.innerHTML = '';
+    
+    const filtered = slashOptions.filter(opt => 
+      opt.title.toLowerCase().includes(slashState.filter) ||
+      opt.id.toLowerCase().includes(slashState.filter)
+    );
+    
+    if (filtered.length === 0) {
+      slashMenu.classList.remove('active');
+      return;
+    }
+    
+    slashMenu.classList.add('active');
+    
+    if (slashState.selectedIndex >= filtered.length) {
+      slashState.selectedIndex = 0;
+    }
+    
+    filtered.forEach((opt, idx) => {
+      const item = document.createElement('div');
+      item.className = 'slash-menu-item';
+      if (idx === slashState.selectedIndex) {
+        item.classList.add('selected');
+      }
+      
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'title';
+      titleSpan.textContent = opt.title;
+      
+      const subtitleSpan = document.createElement('span');
+      subtitleSpan.className = 'subtitle';
+      subtitleSpan.textContent = opt.subtitle;
+      
+      item.appendChild(titleSpan);
+      item.appendChild(subtitleSpan);
+      
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectSlashOption(opt);
+      });
+      
+      slashMenu.appendChild(item);
+    });
+  }
+
+  function selectSlashOption(option) {
+    if (!slashState.textarea) return;
+    const textarea = slashState.textarea;
+    const value = textarea.value;
+    const cursorPos = textarea.selectionStart;
+    
+    const textBeforeSlash = value.substring(0, slashState.startCursorPos);
+    const textAfterCursor = value.substring(cursorPos);
+    
+    const newText = textBeforeSlash + option.prefix + textAfterCursor;
+    textarea.value = newText;
+    
+    const newCursorPos = slashState.startCursorPos + option.prefix.length;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    
+    textarea.dispatchEvent(new Event('input'));
+    
+    closeSlashMenu();
+  }
+
+  function closeSlashMenu() {
+    slashState.active = false;
+    slashState.textarea = null;
+    if (slashMenu) {
+      slashMenu.classList.remove('active');
+    }
   }
 
   function saveAndExit(blockEl, blockData, textarea) {
@@ -571,9 +761,15 @@ import { marked } from 'marked';
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+      slashMenu = document.createElement('div');
+      slashMenu.className = 'slash-menu';
+      document.body.appendChild(slashMenu);
       vscode.postMessage({ type: 'ready' });
     });
   } else {
+    slashMenu = document.createElement('div');
+    slashMenu.className = 'slash-menu';
+    document.body.appendChild(slashMenu);
     vscode.postMessage({ type: 'ready' });
   }
 }());

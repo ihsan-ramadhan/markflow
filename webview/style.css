@@ -293,3 +293,42 @@ body {
   border-radius: 6px;
   box-shadow: 0 0 0 1px var(--vscode-focusBorder, #007acc) inset;
 }
+
+.slash-menu {
+  position: absolute;
+  background-color: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-widget-border, rgba(120, 120, 120, 0.2));
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-radius: 6px;
+  z-index: 1000;
+  width: 250px;
+  max-height: 300px;
+  overflow-y: auto;
+  display: none;
+  flex-direction: column;
+  padding: 4px;
+}
+.slash-menu.active {
+  display: flex;
+}
+.slash-menu-item {
+  padding: 6px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--vscode-editorWidget-foreground);
+  border-radius: 4px;
+}
+.slash-menu-item:hover, .slash-menu-item.selected {
+  background-color: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+.slash-menu-item .title {
+  font-weight: 600;
+  font-size: 13px;
+}
+.slash-menu-item .subtitle {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin-left: 8px;
+}
