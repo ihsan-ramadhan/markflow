@@ -482,6 +482,58 @@ import { marked } from 'marked';
         });
       }
     }
+    else if (e.key === 'ArrowDown') {
+      if (currentBlocks.length === 0) return;
+      e.preventDefault();
+      let nextIndex = 0;
+      if (selectedBlockIds.size > 0 && lastSelectedIndex !== -1) {
+        nextIndex = lastSelectedIndex + 1;
+        if (nextIndex >= currentBlocks.length) {
+          nextIndex = currentBlocks.length - 1;
+        }
+      }
+      selectedBlockIds.clear();
+      selectedBlockIds.add(currentBlocks[nextIndex].id);
+      lastSelectedIndex = nextIndex;
+      updateSelectionStyles();
+      const wrappers = container.querySelectorAll('.block-wrapper');
+      if (wrappers[nextIndex]) {
+        wrappers[nextIndex].scrollIntoView({ block: 'nearest' });
+      }
+    }
+    else if (e.key === 'ArrowUp') {
+      if (currentBlocks.length === 0) return;
+      e.preventDefault();
+      let prevIndex = currentBlocks.length - 1;
+      if (selectedBlockIds.size > 0 && lastSelectedIndex !== -1) {
+        prevIndex = lastSelectedIndex - 1;
+        if (prevIndex < 0) {
+          prevIndex = 0;
+        }
+      }
+      selectedBlockIds.clear();
+      selectedBlockIds.add(currentBlocks[prevIndex].id);
+      lastSelectedIndex = prevIndex;
+      updateSelectionStyles();
+      const wrappers = container.querySelectorAll('.block-wrapper');
+      if (wrappers[prevIndex]) {
+        wrappers[prevIndex].scrollIntoView({ block: 'nearest' });
+      }
+    }
+    else if (e.key === 'Enter') {
+      if (selectedBlockIds.size === 1 && lastSelectedIndex !== -1) {
+        e.preventDefault();
+        const wrappers = container.querySelectorAll('.block-wrapper');
+        const targetWrapper = wrappers[lastSelectedIndex];
+        if (targetWrapper) {
+          const targetBlock = targetWrapper.querySelector('.md-block');
+          const targetBlockData = currentBlocks[lastSelectedIndex];
+          if (targetBlock && targetBlockData) {
+            switchToEditMode(targetBlock, targetBlockData);
+          }
+        }
+      }
+    }
   });
 
   if (document.readyState === 'loading') {
