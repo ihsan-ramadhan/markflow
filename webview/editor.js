@@ -11,6 +11,7 @@ import { marked } from 'marked';
   let shouldSelectLastIndexOnUpdate = false;
 
   let slashMenu = null;
+  let floatingToolbar = null;
   let slashState = { active: false, filter: '', selectedIndex: 0, textarea: null, startCursorPos: 0 };
   const slashOptions = [
     { id: 'text', title: 'Text', subtitle: 'Plain text.', prefix: '' },
@@ -446,9 +447,26 @@ import { marked } from 'marked';
       }
     });
 
+    const handleSelection = () => {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      if (start !== end) {
+        showFloatingToolbar(textarea);
+      } else {
+        closeFloatingToolbar();
+      }
+    };
+
+    textarea.addEventListener('select', handleSelection);
+    textarea.addEventListener('mouseup', handleSelection);
+    textarea.addEventListener('keyup', handleSelection);
+
     textarea.addEventListener('blur', () => {
       console.log('Textarea blur triggered for block ID:', blockData.id, 'isSaving:', isSaving);
-      setTimeout(() => closeSlashMenu(), 150);
+      setTimeout(() => {
+        closeSlashMenu();
+        closeFloatingToolbar();
+      }, 150);
       if (isSaving) return;
       saveAndExit(blockEl, blockData, textarea);
     });
@@ -596,6 +614,104 @@ import { marked } from 'marked';
       index: blockIndex,
       raw: newRaw
     });
+  }
+
+  function initFloatingToolbar() {
+    floatingToolbar = document.createElement('div');
+    floatingToolbar.className = 'floating-toolbar';
+    
+    const formats = [
+      { type: 'bold', label: 'B', title: 'Bold', style: 'font-weight: bold;' },
+      { type: 'italic', label: 'I', title: 'Italic', style: 'font-style: italic;' },
+      { type: 'strikethrough', label: 'S', title: 'Strikethrough', style: 'text-decoration: line-through;' },
+      { type: 'link', label: 'Link', title: 'Link', style: '' }
+    ];
+    
+    formats.forEach(f => {
+      const btn = document.createElement('button');
+      btn.className = 'toolbar-btn';
+      btn.textContent = f.label;
+      btn.title = f.title;
+      if (f.style) btn.setAttribute('style', f.style);
+      
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        applyFormatting(f.type);
+      });
+      
+      floatingToolbar.appendChild(btn);
+    });
+    
+    document.body.appendChild(floatingToolbar);
+  }
+
+  function applyFormatting(type) {
+    if (!editingBlockId) return;
+    const textarea = document.querySelector('.edit-textarea');
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+    if (start === end) return;
+    
+    let formatted = '';
+    switch (type) {
+      case 'bold':
+        if (selectedText.startsWith('**') && selectedText.endsWith('**')) {
+          formatted = selectedText.slice(2, -2);
+        } else {
+          formatted = `**${selectedText}**`;
+        }
+        break;
+      case 'italic':
+        if (selectedText.startsWith('*') && selectedText.endsWith('*')) {
+          formatted = selectedText.slice(1, -1);
+        } else {
+          formatted = `*${selectedText}*`;
+        }
+        break;
+      case 'strikethrough':
+        if (selectedText.startsWith('~~') && selectedText.endsWith('~~')) {
+          formatted = selectedText.slice(2, -2);
+        } else {
+          formatted = `~~${selectedText}~~`;
+        }
+        break;
+      case 'link':
+        if (selectedText.startsWith('[') && selectedText.includes('](') && selectedText.endsWith(')')) {
+          const match = selectedText.match(/^\[(.*)\]\(.*\)$/);
+          formatted = match ? match[1] : selectedText;
+        } else {
+          formatted = `[${selectedText}](https://)`;
+        }
+        break;
+    }
+    
+    textarea.value = text.substring(0, start) + formatted + text.substring(end);
+    textarea.setSelectionRange(start, start + formatted.length);
+    textarea.dispatchEvent(new Event('input'));
+    closeFloatingToolbar();
+  }
+
+  function closeFloatingToolbar() {
+    if (floatingToolbar) {
+      floatingToolbar.classList.remove('active');
+    }
+  }
+
+  function showFloatingToolbar(textarea) {
+    if (!floatingToolbar) return;
+    const rect = textarea.getBoundingClientRect();
+    const toolbarWidth = 180;
+    const left = rect.left + (rect.width - toolbarWidth) / 2 + window.scrollX;
+    const top = rect.top - 38 + window.scrollY;
+    
+    floatingToolbar.style.left = `${Math.max(10, left)}px`;
+    floatingToolbar.style.top = `${Math.max(10, top)}px`;
+    floatingToolbar.classList.add('active');
   }
 
   function updateSelectionStyles() {
@@ -764,12 +880,14 @@ import { marked } from 'marked';
       slashMenu = document.createElement('div');
       slashMenu.className = 'slash-menu';
       document.body.appendChild(slashMenu);
+      initFloatingToolbar();
       vscode.postMessage({ type: 'ready' });
     });
   } else {
     slashMenu = document.createElement('div');
     slashMenu.className = 'slash-menu';
     document.body.appendChild(slashMenu);
+    initFloatingToolbar();
     vscode.postMessage({ type: 'ready' });
   }
 }());

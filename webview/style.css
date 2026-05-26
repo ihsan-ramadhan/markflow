@@ -332,3 +332,38 @@ body {
   color: var(--vscode-descriptionForeground);
   margin-left: 8px;
 }
+
+.floating-toolbar {
+  position: absolute;
+  background-color: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-widget-border, rgba(120, 120, 120, 0.2));
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-radius: 6px;
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  padding: 4px;
+  gap: 2px;
+}
+.floating-toolbar.active {
+  display: flex;
+}
+.floating-toolbar .toolbar-btn {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--vscode-editorWidget-foreground);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+.floating-toolbar .toolbar-btn:hover {
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(120, 120, 120, 0.15));
+}
+
