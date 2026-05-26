@@ -8,6 +8,7 @@ import { marked } from 'marked';
   let pendingFocusIndex = null;
   let selectedBlockIds = new Set();
   let lastSelectedIndex = -1;
+  let shouldSelectLastIndexOnUpdate = false;
 
   window.addEventListener('message', (event) => {
     const message = event.data;
@@ -17,6 +18,7 @@ import { marked } from 'marked';
         editingBlockId = null;
         selectedBlockIds.clear();
         lastSelectedIndex = -1;
+        shouldSelectLastIndexOnUpdate = false;
         renderBlocks(message.blocks);
         break;
       case 'update':
@@ -25,7 +27,34 @@ import { marked } from 'marked';
           break;
         }
         console.log('Rendering blocks on update message');
+
+        const selectedIndices = [];
+        if (!shouldSelectLastIndexOnUpdate) {
+          currentBlocks.forEach((block, index) => {
+            if (selectedBlockIds.has(block.id)) {
+              selectedIndices.push(index);
+            }
+          });
+        }
+
         renderBlocks(message.blocks);
+
+        if (shouldSelectLastIndexOnUpdate) {
+          selectedBlockIds.clear();
+          if (lastSelectedIndex !== -1 && lastSelectedIndex < currentBlocks.length) {
+            selectedBlockIds.add(currentBlocks[lastSelectedIndex].id);
+          }
+          updateSelectionStyles();
+          shouldSelectLastIndexOnUpdate = false;
+        } else {
+          selectedBlockIds.clear();
+          selectedIndices.forEach(idx => {
+            if (idx >= 0 && idx < currentBlocks.length) {
+              selectedBlockIds.add(currentBlocks[idx].id);
+            }
+          });
+          updateSelectionStyles();
+        }
         break;
     }
   });
@@ -181,6 +210,8 @@ import { marked } from 'marked';
     updateSelectionStyles();
 
     editingBlockId = blockData.id;
+    lastSelectedIndex = currentBlocks.findIndex(b => b.id === blockData.id);
+    shouldSelectLastIndexOnUpdate = false;
     blockEl.classList.add('editing');
     let isSaving = false;
     
@@ -242,6 +273,7 @@ import { marked } from 'marked';
       } else if (e.key === 'Escape') {
         console.log('Escape pressed, blurring textarea');
         e.preventDefault();
+        shouldSelectLastIndexOnUpdate = true;
         textarea.blur();
       } else if (e.key === 'Tab') {
         e.preventDefault();
@@ -294,6 +326,7 @@ import { marked } from 'marked';
       } else if (e.key === 'Enter' && !e.shiftKey && !cmdKey) {
         e.preventDefault();
         console.log('Enter pressed, blurring textarea');
+        shouldSelectLastIndexOnUpdate = true;
         textarea.blur();
       } else if (cmdKey && e.key === 'Enter') {
         e.preventDefault();
