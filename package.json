@@ -1,8 +1,8 @@
 {
-  "name": "markflow-editor",
-  "displayName": "MarkFlow Editor",
-  "description": "WYSIWYG inline Markdown editor for VSCode. No split panes, edit and preview in one place.",
-  "version": "1.0.1",
+  "name": "markblock",
+  "displayName": "Markblock",
+  "description": "A block-based WYSIWYG inline Markdown editor for VSCode. No split panes, edit and preview in one place.",
+  "version": "1.1.0",
   "icon": "logo.png",
   "publisher": "ihsanramadhan",
   "engines": {
@@ -13,15 +13,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/ihsan-ramadhan/markflow.git"
+    "url": "https://github.com/ihsan-ramadhan/markblock.git"
   },
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "customEditors": [
       {
-        "viewType": "markflow.markdownEditor",
-        "displayName": "MarkFlow Editor",
+        "viewType": "markblock.markdownEditor",
+        "displayName": "Markblock",
         "selector": [
           {
             "filenamePattern": "*.md"

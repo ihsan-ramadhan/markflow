@@ -140,7 +140,7 @@ import { marked } from 'marked';
       blockEl.dataset.type = block.type;
       
       if (!block.raw || block.raw.trim() === '' || block.raw === 'New paragraph') {
-        blockEl.innerHTML = `<p class="placeholder-text">Tulis sesuatu, atau ketik '/' untuk perintah...</p>`;
+        blockEl.innerHTML = `<p class="placeholder-text">Write something, or type '/' for commands...</p>`;
       } else {
         blockEl.innerHTML = block.html;
       }
@@ -239,7 +239,7 @@ import { marked } from 'marked';
     const textarea = document.createElement('textarea');
     textarea.className = 'edit-textarea';
     textarea.value = (blockData.raw === 'New paragraph') ? '' : blockData.raw;
-    textarea.placeholder = "Ketik '/' untuk memunculkan perintah...";
+    textarea.placeholder = "Type '/' for commands...";
     
     const lines = blockData.raw.split('\n').length;
     textarea.rows = Math.max(lines, 2);

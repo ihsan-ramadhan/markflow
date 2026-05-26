@@ -1,4 +1,4 @@
-# MarkFlow
+# Markblock
 
 A block-based WYSIWYG (What You See Is What You Get) Markdown editor designed seamlessly as a Custom Editor for Visual Studio Code. It brings a Notion-like editing experience directly into your favorite code editor.
 
@@ -6,25 +6,64 @@ A block-based WYSIWYG (What You See Is What You Get) Markdown editor designed se
 
 ## Features
 
-- Custom Editor - opens `.md` files natively as a block-based visual editor
-- Inline block editing - double-click any paragraph or heading to edit raw Markdown
-- Blur-to-commit - click outside to apply changes and render instantly
-- Inline Undo/Redo - character-by-character history within active text blocks
-- Native auto-save - integrates seamlessly with VSCode's file system lifecycle
+- **Custom Editor Integration** - Works natively as a VS Code custom editor for `.md` files.
+- **Inline WYSIWYG Editing** - Seamless editing experience without separate preview panes.
+- **Slash Command Menu** - Dynamic command menu to insert headings, lists, code blocks, tables, callouts, and media blocks quickly.
+- **Keyboard-First Design** - Efficient navigation, block creation, and focus management using key shortcuts.
+- **Multi-Block Actions** - Select, copy, cut, delete, and manage multiple blocks simultaneously.
+- **Floating Formatting Toolbar** - Instant text formatting options upon selection.
+- **Native Document Integration** - Full support for VS Code's Undo/Redo history and filesystem sync.
 
 ---
 
-## Usage
+## Usage & Shortcuts
 
-| Action                | How-to |
-| --------------------- | ---------------------- |
-| **Open File**   | Click any `.md` file. If it opens as raw text, right-click the file tab → **Reopen Editor With...** → **MarkFlow Editor**. |
-| **Edit Block**  | Double-click any rendered text block (paragraph, heading, etc.) to enter raw Markdown mode. |
-| **Save Block**  | Click anywhere outside the active block to render the HTML and sync changes to VSCode. |
-| **Inline Undo** | Press `Ctrl+Z` (`Cmd+Z` on Mac) while typing inside a block to undo character-by-character. |
-| **Inline Redo** | Press `Ctrl+Y` or `Ctrl+Shift+Z` while typing inside a block to redo. |
-| **Global Undo** | Press `Ctrl+Z` outside a block to revert the entire last block edit. |
-| **Global Redo** | Press `Ctrl+Y` or `Ctrl+Shift+Z` outside a block to revert the entire last block edit. |
+### 1. Editing Blocks
+| Action | Key / Gesture | Description |
+| --- | --- | --- |
+| **Start Editing** | Double-click or select block + `Enter` | Opens raw Markdown editor for the selected block. |
+| **Save & Exit** | `Escape` or Click outside | Saves your changes, parses markdown, and returns to preview mode. |
+| **Cycle Next Block** | `Tab` | Saves the current block and edits the block below. |
+| **Cycle Prev Block** | `Shift+Tab` | Saves the current block and edits the block above. |
+
+### 2. Block Insertion & Deletion
+| Action | Key / Gesture | Description |
+| --- | --- | --- |
+| **Add Block Below** | `Ctrl+Enter` (while editing) | Saves the current block, inserts a new empty paragraph below, and focuses it. |
+| **Add Block (Hover)** | Click `+` on block hover | Inserts a new empty paragraph directly below the hovered block. |
+| **Add Block (Bottom)**| Click `+ Add Block` at bottom | Inserts a new paragraph block at the end of the document. |
+| **Delete Block (Hover)**| Click `🗑️` on block hover | Instantly deletes the hovered block. |
+| **Delete Block (Key)** | `Backspace` (on empty block) | Deletes the active empty block and focus shifts to the previous block. |
+
+### 3. Multi-Block Selection (Preview Mode)
+| Action | Key / Gesture | Description |
+| --- | --- | --- |
+| **Toggle Selection** | `Ctrl + Click` (`Cmd + Click` on Mac) | Selects/deselects specific blocks individually. |
+| **Select Range** | `Shift + Click` | Selects a range of blocks between the last selected block and the clicked block. |
+| **Select All** | `Ctrl+A` (`Cmd+A` on Mac) | Selects all blocks in the document. |
+| **Cancel Selection** | `Escape` or Click empty area | Deselects all currently selected blocks. |
+
+### 4. Selection Actions & Navigation
+| Action | Key / Gesture | Description |
+| --- | --- | --- |
+| **Move Focus** | `ArrowUp` / `ArrowDown` | Moves the block selection highlight up or down. Auto-scrolls block into view. |
+| **Mass Delete** | `Delete` or `Backspace` | Deletes all selected blocks at once. |
+| **Mass Copy** | `Ctrl+C` (`Cmd+C` on Mac) | Copies raw Markdown content of all selected blocks to clipboard. |
+| **Mass Cut** | `Ctrl+X` (`Cmd+X` on Mac) | Copies raw Markdown of selected blocks, then deletes the blocks. |
+
+### 5. Slash Command Menu (`/`)
+*Type `/` at the start of a block or after a space while editing to open the menu.*
+- **Navigation**: Use `ArrowUp` / `ArrowDown` to highlight options.
+- **Select**: Press `Enter` or click the option to insert it.
+- **Close**: Press `Escape` or type to filter out.
+- **Available Blocks**: Headings (1-3), Bulleted Lists, Numbered Lists, Checklists, Images, Videos, Files, Code Blocks, Tables, Blockquotes, Dividers, and Callouts.
+
+### 6. Floating Formatting Toolbar
+*Highlight text selection inside a block while editing to trigger the toolbar.*
+- **Bold**: Toggle bold formatting (`**text**`).
+- **Italic**: Toggle italic formatting (`*text*`).
+- **Strikethrough**: Toggle strikethrough formatting (`~~text~~`).
+- **Link**: Wrap selected text in Markdown link template (`[text](url)`).
 
 ---
 
@@ -38,7 +77,7 @@ A block-based WYSIWYG (What You See Is What You Get) Markdown editor designed se
 ### Setup
 
 ```bash
-git clone https://github.com/ihsan-ramadhan/markflow
+git clone https://github.com/ihsan-ramadhan/markblock.git
 cd markflow
 npm install
 ```
@@ -54,7 +93,7 @@ To test the extension:
 
 1. Open the project in VSCode.
 2. Press `F5` to open a new Extension Development Host window.
-3. Open any `.md` file to see MarkFlow in action.
+3. Open any `.md` file to see Markblock in action.
 
 ---
 
