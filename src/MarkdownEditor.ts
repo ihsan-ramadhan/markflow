@@ -59,6 +59,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           case 'deleteBlock':
             this.deleteBlock(document, message.index);
             break;
+          case 'deleteBlocks':
+            this.deleteBlocks(document, message.indices);
+            break;
         }
       },
       undefined,
@@ -140,6 +143,29 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
     const newText = deleteBlockInContent(document.getText(), block.id, block.position);
     const normalizedText = normalizeNewlines(newText);
+
+    const edit = new vscode.WorkspaceEdit();
+    const lastLine = document.lineAt(document.lineCount - 1);
+    const fullRange = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
+    
+    edit.replace(document.uri, fullRange, normalizedText);
+    vscode.workspace.applyEdit(edit);
+  }
+
+  private deleteBlocks(document: vscode.TextDocument, indices: number[]) {
+    const sortedIndices = [...indices].sort((a, b) => b - a);
+    let currentText = document.getText();
+    
+    const blocks = markdownToBlocks(currentText);
+
+    for (const index of sortedIndices) {
+      if (index < 0 || index >= blocks.length) continue;
+      const block = blocks[index];
+      if (!block.position) continue;
+      currentText = deleteBlockInContent(currentText, block.id, block.position);
+    }
+
+    const normalizedText = normalizeNewlines(currentText);
 
     const edit = new vscode.WorkspaceEdit();
     const lastLine = document.lineAt(document.lineCount - 1);

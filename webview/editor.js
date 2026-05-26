@@ -6,6 +6,8 @@ import { marked } from 'marked';
   let currentBlocks = [];
   let editingBlockId = null;
   let pendingFocusIndex = null;
+  let selectedBlockIds = new Set();
+  let lastSelectedIndex = -1;
 
   window.addEventListener('message', (event) => {
     const message = event.data;
@@ -13,6 +15,8 @@ import { marked } from 'marked';
     switch (message.type) {
       case 'init':
         editingBlockId = null;
+        selectedBlockIds.clear();
+        lastSelectedIndex = -1;
         renderBlocks(message.blocks);
         break;
       case 'update':
@@ -45,6 +49,9 @@ import { marked } from 'marked';
     blocks.forEach((block, index) => {
       const wrapper = document.createElement('div');
       wrapper.className = 'block-wrapper';
+      if (selectedBlockIds.has(block.id)) {
+        wrapper.classList.add('selected');
+      }
 
       const actionGroup = document.createElement('div');
       actionGroup.className = 'block-actions';
@@ -87,6 +94,43 @@ import { marked } from 'marked';
       } else {
         blockEl.innerHTML = block.html;
       }
+
+      blockEl.addEventListener('mousedown', (e) => {
+        if (editingBlockId !== null) return;
+        
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+        const shiftKey = e.shiftKey;
+
+        // Prevent native blue text selection when Ctrl/Shift selecting blocks
+        if (ctrlKey || shiftKey) {
+          e.preventDefault();
+          window.getSelection().removeAllRanges();
+        }
+        e.stopPropagation();
+
+        if (ctrlKey) {
+          if (selectedBlockIds.has(block.id)) {
+            selectedBlockIds.delete(block.id);
+          } else {
+            selectedBlockIds.add(block.id);
+            lastSelectedIndex = index;
+          }
+        } else if (shiftKey && lastSelectedIndex !== -1) {
+          const start = Math.min(lastSelectedIndex, index);
+          const end = Math.max(lastSelectedIndex, index);
+          selectedBlockIds.clear();
+          for (let i = start; i <= end; i++) {
+            selectedBlockIds.add(currentBlocks[i].id);
+          }
+        } else {
+          selectedBlockIds.clear();
+          selectedBlockIds.add(block.id);
+          lastSelectedIndex = index;
+        }
+
+        updateSelectionStyles();
+      });
 
       wrapper.appendChild(actionGroup);
       wrapper.appendChild(blockEl);
@@ -133,6 +177,9 @@ import { marked } from 'marked';
   });
 
   function switchToEditMode(blockEl, blockData) {
+    selectedBlockIds.clear();
+    updateSelectionStyles();
+
     editingBlockId = blockData.id;
     blockEl.classList.add('editing');
     let isSaving = false;
@@ -327,6 +374,115 @@ import { marked } from 'marked';
       raw: newRaw
     });
   }
+
+  function updateSelectionStyles() {
+    const wrappers = container.querySelectorAll('.block-wrapper');
+    wrappers.forEach((wrapper, index) => {
+      const block = currentBlocks[index];
+      if (block && selectedBlockIds.has(block.id)) {
+        wrapper.classList.add('selected');
+      } else {
+        wrapper.classList.remove('selected');
+      }
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (editingBlockId !== null) return;
+    if (!e.target.closest('.block-wrapper')) {
+      selectedBlockIds.clear();
+      lastSelectedIndex = -1;
+      updateSelectionStyles();
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (editingBlockId !== null) return;
+
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+
+    if (ctrlKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      selectedBlockIds.clear();
+      currentBlocks.forEach(b => selectedBlockIds.add(b.id));
+      lastSelectedIndex = 0;
+      updateSelectionStyles();
+    }
+    else if (e.key === 'Escape') {
+      if (selectedBlockIds.size > 0) {
+        e.preventDefault();
+        selectedBlockIds.clear();
+        lastSelectedIndex = -1;
+        updateSelectionStyles();
+      }
+    }
+    else if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedBlockIds.size > 0) {
+        e.preventDefault();
+        const indicesToDelete = [];
+        currentBlocks.forEach((block, index) => {
+          if (selectedBlockIds.has(block.id)) {
+            indicesToDelete.push(index);
+          }
+        });
+        
+        selectedBlockIds.clear();
+        lastSelectedIndex = -1;
+        updateSelectionStyles();
+
+        vscode.postMessage({
+          type: 'deleteBlocks',
+          indices: indicesToDelete
+        });
+      }
+    }
+    else if (ctrlKey && e.key.toLowerCase() === 'c') {
+      if (selectedBlockIds.size > 0) {
+        e.preventDefault();
+        const copyText = currentBlocks
+          .filter(block => selectedBlockIds.has(block.id))
+          .map(block => block.raw)
+          .join('\n\n');
+
+        navigator.clipboard.writeText(copyText).then(() => {
+          console.log('Copied blocks to clipboard successfully');
+        }).catch(err => {
+          console.error('Failed to copy blocks to clipboard:', err);
+        });
+      }
+    }
+    else if (ctrlKey && e.key.toLowerCase() === 'x') {
+      if (selectedBlockIds.size > 0) {
+        e.preventDefault();
+        const copyText = currentBlocks
+          .filter(block => selectedBlockIds.has(block.id))
+          .map(block => block.raw)
+          .join('\n\n');
+
+        navigator.clipboard.writeText(copyText).then(() => {
+          console.log('Cut blocks copied to clipboard successfully');
+          const indicesToDelete = [];
+          currentBlocks.forEach((block, index) => {
+            if (selectedBlockIds.has(block.id)) {
+              indicesToDelete.push(index);
+            }
+          });
+          
+          selectedBlockIds.clear();
+          lastSelectedIndex = -1;
+          updateSelectionStyles();
+
+          vscode.postMessage({
+            type: 'deleteBlocks',
+            indices: indicesToDelete
+          });
+        }).catch(err => {
+          console.error('Failed to cut blocks:', err);
+        });
+      }
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
