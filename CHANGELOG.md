@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.1.1] - May 26th, 2026
+
+### Fixed
+- Fixed infinite loading issue in webview by correcting the custom editor viewType registration.
+
 ## [1.1.0] - May 26th, 2026
 
 ### Added

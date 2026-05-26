@@ -2,7 +2,7 @@
   "name": "markblock",
   "displayName": "Markblock",
   "description": "A block-based WYSIWYG inline Markdown editor for VSCode. No split panes, edit and preview in one place.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "icon": "logo.png",
   "publisher": "ihsanramadhan",
   "engines": {

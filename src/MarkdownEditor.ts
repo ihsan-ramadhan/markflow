@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { markdownToBlocks, updateBlockInContent, insertBlockInContent, deleteBlockInContent } from './utils/parser';
 
 export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
-  private static readonly viewType = 'markflow.markdownEditor';
+  private static readonly viewType = 'markblock.markdownEditor';
 
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
     const provider = new MarkdownEditorProvider(context);
@@ -19,7 +19,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     webviewPanel.webview.options = {
       enableScripts: true,
       localResourceRoots: [
-        vscode.Uri.joinPath(this.context.extensionUri, 'dist'),
+        this.context.extensionUri,
       ],
     };
 
