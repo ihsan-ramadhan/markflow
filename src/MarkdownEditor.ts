@@ -1,30 +1,7 @@
 import * as vscode from 'vscode';
-import { markdownToBlocks, updateBlockInContent } from './utils/parser';
+import { markdownToBlocks, updateBlockInContent, insertBlockInContent, deleteBlockInContent } from './utils/parser';
 
-class MarkdownDocument implements vscode.CustomDocument {
-  private readonly _onDidDispose = new vscode.EventEmitter<void>();
-  public readonly onDidDispose = this._onDidDispose.event;
-
-  constructor(
-    public readonly uri: vscode.Uri,
-    private _documentText: string
-  ) {}
-
-  public get text(): string {
-    return this._documentText;
-  }
-
-  public set text(value: string) {
-    this._documentText = value;
-  }
-
-  public dispose(): void {
-    this._onDidDispose.fire();
-    this._onDidDispose.dispose();
-  }
-}
-
-export class MarkdownEditorProvider implements vscode.CustomEditorProvider<MarkdownDocument> {
+export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = 'markflow.markdownEditor';
 
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
@@ -32,23 +9,10 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
     return vscode.window.registerCustomEditorProvider(MarkdownEditorProvider.viewType, provider);
   }
 
-  private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<MarkdownDocument>>();
-  public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
-
   constructor(private readonly context: vscode.ExtensionContext) {}
 
-  public async openCustomDocument(
-    uri: vscode.Uri,
-    _openContext: vscode.CustomDocumentOpenContext,
-    _token: vscode.CancellationToken
-  ): Promise<MarkdownDocument> {
-    const fileData = await vscode.workspace.fs.readFile(uri);
-    const content = new TextDecoder('utf-8').decode(fileData);
-    return new MarkdownDocument(uri, content);
-  }
-
-  public async resolveCustomEditor(
-    document: MarkdownDocument,
+  public async resolveCustomTextEditor(
+    document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
     _token: vscode.CancellationToken
   ): Promise<void> {
@@ -74,88 +38,144 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
       .replace('${scriptUri}', scriptUri.toString())
       .replace('${styleUri}', styleUri.toString());
 
-    webviewPanel.webview.onDidReceiveMessage(
+    const messageSubscription = webviewPanel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.type) {
           case 'ready':
             webviewPanel.webview.postMessage({
               type: 'init',
-              blocks: markdownToBlocks(document.text),
+              blocks: markdownToBlocks(document.getText()),
             });
             break;
           case 'updateBlock':
-            this.updateBlock(document, message.index, message.raw, webviewPanel);
+            this.updateBlock(document, message.index, message.raw);
+            break;
+          case 'addBlock':
+            this.addBlock(document, message.index);
+            break;
+          case 'saveAndAddBlock':
+            this.saveAndAddBlock(document, message.index, message.raw);
+            break;
+          case 'deleteBlock':
+            this.deleteBlock(document, message.index);
+            break;
+          case 'deleteBlocks':
+            this.deleteBlocks(document, message.indices);
             break;
         }
       },
       undefined,
       this.context.subscriptions
     );
+
+    const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(e => {
+      if (e.document.uri.toString() === document.uri.toString()) {
+        webviewPanel.webview.postMessage({
+          type: 'update',
+          blocks: markdownToBlocks(document.getText())
+        });
+      }
+    });
+
+    webviewPanel.onDidDispose(() => {
+      changeDocumentSubscription.dispose();
+      messageSubscription.dispose();
+    });
   }
 
-  private updateBlock(document: MarkdownDocument, index: number, newRaw: string, webviewPanel: vscode.WebviewPanel) {
-    const blocks = markdownToBlocks(document.text);
+  private updateBlock(document: vscode.TextDocument, index: number, newRaw: string) {
+    const blocks = markdownToBlocks(document.getText());
     if (index < 0 || index >= blocks.length) return;
 
     const block = blocks[index];
     if (!block.position) return;
 
-    const oldText = document.text;
-    const newText = updateBlockInContent(document.text, block.id, newRaw, block.position);
+    const newText = updateBlockInContent(document.getText(), block.id, newRaw, block.position);
+    const normalizedText = normalizeNewlines(newText);
     
-    this._onDidChangeCustomDocument.fire({
-      document,
-      undo: () => {
-        document.text = oldText;
-        webviewPanel.webview.postMessage({ type: 'update', blocks: markdownToBlocks(document.text) });
-      },
-      redo: () => {
-        document.text = newText;
-        webviewPanel.webview.postMessage({ type: 'update', blocks: markdownToBlocks(document.text) });
-      }
-    });
+    const edit = new vscode.WorkspaceEdit();
+    const lastLine = document.lineAt(document.lineCount - 1);
+    const fullRange = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
     
-    document.text = newText;
+    edit.replace(document.uri, fullRange, normalizedText);
+    vscode.workspace.applyEdit(edit);
   }
 
-  public async saveCustomDocument(
-    document: MarkdownDocument,
-    _cancellation: vscode.CancellationToken
-  ): Promise<void> {
-    const encoded = new TextEncoder().encode(document.text);
-    await vscode.workspace.fs.writeFile(document.uri, encoded);
+  private addBlock(document: vscode.TextDocument, index: number) {
+    const blocks = markdownToBlocks(document.getText());
+    const newText = insertBlockInContent(document.getText(), index, blocks);
+    const normalizedText = normalizeNewlines(newText);
+
+    const edit = new vscode.WorkspaceEdit();
+    const lastLine = document.lineAt(document.lineCount - 1);
+    const fullRange = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
+    
+    edit.replace(document.uri, fullRange, normalizedText);
+    vscode.workspace.applyEdit(edit);
   }
 
-  public async saveCustomDocumentAs(
-    document: MarkdownDocument,
-    destination: vscode.Uri,
-    _cancellation: vscode.CancellationToken
-  ): Promise<void> {
-    const encoded = new TextEncoder().encode(document.text);
-    await vscode.workspace.fs.writeFile(destination, encoded);
+  private saveAndAddBlock(document: vscode.TextDocument, index: number, newRaw: string) {
+    const blocks = markdownToBlocks(document.getText());
+    if (index < 0 || index >= blocks.length) return;
+
+    const block = blocks[index];
+    if (!block.position) return;
+    const updatedText = updateBlockInContent(document.getText(), block.id, newRaw, block.position);
+
+    const updatedBlocks = markdownToBlocks(updatedText);
+    const newText = insertBlockInContent(updatedText, index, updatedBlocks);
+    const normalizedText = normalizeNewlines(newText);
+
+    const edit = new vscode.WorkspaceEdit();
+    const lastLine = document.lineAt(document.lineCount - 1);
+    const fullRange = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
+    
+    edit.replace(document.uri, fullRange, normalizedText);
+    vscode.workspace.applyEdit(edit);
   }
 
-  public async revertCustomDocument(
-    document: MarkdownDocument,
-    _cancellation: vscode.CancellationToken
-  ): Promise<void> {
-    const fileData = await vscode.workspace.fs.readFile(document.uri);
-    const content = new TextDecoder('utf-8').decode(fileData);
-    document.text = content;
+  private deleteBlock(document: vscode.TextDocument, index: number) {
+    const blocks = markdownToBlocks(document.getText());
+    if (index < 0 || index >= blocks.length) return;
+
+    const block = blocks[index];
+    if (!block.position) return;
+
+    const newText = deleteBlockInContent(document.getText(), block.id, block.position);
+    const normalizedText = normalizeNewlines(newText);
+
+    const edit = new vscode.WorkspaceEdit();
+    const lastLine = document.lineAt(document.lineCount - 1);
+    const fullRange = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
+    
+    edit.replace(document.uri, fullRange, normalizedText);
+    vscode.workspace.applyEdit(edit);
   }
 
-  public async backupCustomDocument(
-    document: MarkdownDocument,
-    backupContext: vscode.CustomDocumentBackupContext,
-    _cancellation: vscode.CancellationToken
-  ): Promise<vscode.CustomDocumentBackup> {
-    const encoded = new TextEncoder().encode(document.text);
-    await vscode.workspace.fs.writeFile(backupContext.destination, encoded);
+  private deleteBlocks(document: vscode.TextDocument, indices: number[]) {
+    const sortedIndices = [...indices].sort((a, b) => b - a);
+    let currentText = document.getText();
+    
+    const blocks = markdownToBlocks(currentText);
 
-    return {
-      id: backupContext.destination.toString(),
-      delete: async () => {},
-    };
+    for (const index of sortedIndices) {
+      if (index < 0 || index >= blocks.length) continue;
+      const block = blocks[index];
+      if (!block.position) continue;
+      currentText = deleteBlockInContent(currentText, block.id, block.position);
+    }
+
+    const normalizedText = normalizeNewlines(currentText);
+
+    const edit = new vscode.WorkspaceEdit();
+    const lastLine = document.lineAt(document.lineCount - 1);
+    const fullRange = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
+    
+    edit.replace(document.uri, fullRange, normalizedText);
+    vscode.workspace.applyEdit(edit);
   }
+}
 
+function normalizeNewlines(text: string): string {
+  return text.replace(/(\r?\n){3,}/g, '$1$1');
 }
